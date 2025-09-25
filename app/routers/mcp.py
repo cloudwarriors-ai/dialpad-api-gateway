@@ -49,10 +49,15 @@ async def transform_data(
 
                 # Map job type code to ID for legacy compatibility
                 job_type_mapping = {
-                    "dialpad_users": 60,
-                    "dialpad_sites": 61,
-                    "dialpad_call_queues": 62,
-                    "dialpad_auto_receptionists": 63
+                    "sites": 52,
+                    "users": 55,
+                    "call queues": 56,
+                    "ivr": 57,
+                    "dialpad_zoom_users": 60,
+                    "dialpad_zoom_sites": 61,
+                    "dialpad_zoom_callqueues": 62,
+                    "dialpad_zoom_autoreceptionists": 63,
+                    "dialpad_zoom_ivr": 79
                 }
 
                 job_type_id = job_type_mapping.get(job_type_code)
