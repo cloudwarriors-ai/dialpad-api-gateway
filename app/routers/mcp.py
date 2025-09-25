@@ -43,20 +43,32 @@ async def transform_data(
             
             if method == "transform_to_ssot":
                 # Dialpad → SSOT transformation
-                job_type_id = params.get("job_type_id")
+                job_type_code = params.get("job_type")
                 source_platform = params.get("source_platform", "dialpad")
                 source_data = params.get("source_data", {})
-                
+
+                # Map job type code to ID for legacy compatibility
+                job_type_mapping = {
+                    "dialpad_users": 60,
+                    "dialpad_sites": 61,
+                    "dialpad_call_queues": 62,
+                    "dialpad_auto_receptionists": 63
+                }
+
+                job_type_id = job_type_mapping.get(job_type_code)
+                if not job_type_id:
+                    raise ValueError(f"Job type code '{job_type_code}' not supported")
+
                 # Initialize services
                 field_mapping_service = FieldMappingService(db)
                 metadata_service = MetadataService()
                 config_service = ConfigService(db)
-                
+
                 # Get job type configuration
                 job_type_config = config_service.get_job_type_config(job_type_id)
                 if not job_type_config:
                     raise ValueError(f"Job type ID {job_type_id} not found")
-                
+
                 # Get field mappings for job type to determine target entity dynamically
                 mappings = field_mapping_service.get_mappings_for_job_type(job_type_id)
                 if not mappings:
@@ -93,6 +105,7 @@ async def transform_data(
                     request_id=request_id,
                     operation="transform_to_ssot",
                     parameters={
+                        "job_type_code": job_type_code,
                         "job_type_id": job_type_id,
                         "source_platform": source_platform,
                         "entity_type": target_entity
@@ -107,9 +120,10 @@ async def transform_data(
                 return {
                     "request_id": request_id,
                     "status": "completed",
-                    "message": f"Transformation to SSOT completed for job_type_id: {job_type_id}",
+                    "message": f"Transformation to SSOT completed for job_type: {job_type_code}",
                     "details": {
                         "ssot_data": ssot_data,
+                        "job_type_code": job_type_code,
                         "job_type_id": job_type_id,
                         "source_platform": source_platform,
                         "target_entity": target_entity
