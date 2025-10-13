@@ -1,4 +1,4 @@
-# Dialpad Platform Microservice
+# Dialpad API Gateway
 
 ## Overview
 
@@ -6,7 +6,7 @@ This microservice is part of the CloudWarriors ETL system, focused specifically 
 
 ## Purpose
 
-The Dialpad Platform Microservice serves as a dedicated connector between the CloudWarriors ETL system and Dialpad's API services. Its primary responsibilities include:
+The Dialpad API Gateway serves as a dedicated connector between the CloudWarriors ETL system and Dialpad's API services. Its primary responsibilities include:
 
 - **Field Mapping**: Implementing field mappings between Dialpad and SSOT schemas
 - **Metadata Handling**: Managing unmapped fields through metadata
@@ -37,8 +37,8 @@ This service follows a modular, field-mapping based architecture:
 
 ```bash
 # Clone the repository
-git clone https://github.com/cloudwarriors/dialpad-platform-microservice.git
-cd dialpad-platform-microservice
+git clone https://github.com/cloudwarriors-ai/dialpad-api-gateway.git
+cd dialpad-api-gateway
 
 # Create a virtual environment
 python -m venv venv
