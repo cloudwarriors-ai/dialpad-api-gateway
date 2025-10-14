@@ -143,7 +143,7 @@ def custom_openapi():
 
     # Inject discovered endpoints into standard OpenAPI paths
     for endpoint in endpoints:
-        path = endpoint.get('endpoint', '')
+        path = endpoint.get('path', '')
         method = endpoint.get('method', 'GET').lower()
 
         # Initialize path if not present
@@ -152,10 +152,10 @@ def custom_openapi():
 
         # Build operation object
         operation = {
-            'summary': endpoint.get('name', ''),
+            'summary': endpoint.get('summary', ''),
             'description': endpoint.get('description', ''),
             'operationId': endpoint.get('operationId', f"{method}_{path.replace('/', '_')}"),
-            'tags': [endpoint.get('category', 'Uncategorized')],
+            'tags': endpoint.get('tags', [endpoint.get('category', 'Uncategorized')]),
             'parameters': endpoint.get('parameters', []),
             'responses': {
                 '200': {
