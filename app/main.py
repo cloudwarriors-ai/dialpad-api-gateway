@@ -133,8 +133,46 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # Add x-dialpad-endpoints extension
+    # Get discovered Dialpad endpoints
     dialpad_data = dialpad_discovery.fetch_dialpad_endpoints()
+    endpoints = dialpad_data.get("endpoints", [])
+
+    # Initialize paths if not present
+    if 'paths' not in openapi_schema:
+        openapi_schema['paths'] = {}
+
+    # Inject discovered endpoints into standard OpenAPI paths
+    for endpoint in endpoints:
+        path = endpoint.get('endpoint', '')
+        method = endpoint.get('method', 'GET').lower()
+
+        # Initialize path if not present
+        if path not in openapi_schema['paths']:
+            openapi_schema['paths'][path] = {}
+
+        # Build operation object
+        operation = {
+            'summary': endpoint.get('name', ''),
+            'description': endpoint.get('description', ''),
+            'operationId': endpoint.get('operationId', f"{method}_{path.replace('/', '_')}"),
+            'tags': [endpoint.get('category', 'Uncategorized')],
+            'parameters': endpoint.get('parameters', []),
+            'responses': {
+                '200': {
+                    'description': 'Successful response',
+                    'content': {
+                        'application/json': {
+                            'schema': {'type': 'object'}
+                        }
+                    }
+                }
+            }
+        }
+
+        # Add to paths
+        openapi_schema['paths'][path][method] = operation
+
+    # Keep x-dialpad-endpoints for backward compatibility
     openapi_schema["x-dialpad-endpoints"] = {
         "source": dialpad_data["source"],
         "endpoint_count": dialpad_data["total_endpoints"],
