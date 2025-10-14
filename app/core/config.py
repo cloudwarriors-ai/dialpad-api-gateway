@@ -33,7 +33,16 @@ class Settings(BaseSettings):
     # Dialpad API settings
     DIALPAD_API_KEY: str = os.getenv("DIALPAD_API_KEY", "")
     DIALPAD_API_SECRET: str = os.getenv("DIALPAD_API_SECRET", "")
-    
+
+    # Redis settings
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "tesseract-redis")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
+    REDIS_URL: str = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+    # Session settings
+    SESSION_TTL: int = 300  # 5 minutes
+
     # CORS settings
     CORS_ORIGINS: list = ["*"]  # Update with actual origins in production
     CORS_ALLOW_CREDENTIALS: bool = True
