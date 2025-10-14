@@ -1,0 +1,30 @@
+name: Notify Monorepo on Master Push
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  notify-monorepo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger monorepo submodule update
+        run: |
+          echo "🚀 Notifying monorepo of Dialpad gateway update..."
+
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.MONOREPO_PAT }}" \
+            https://api.github.com/repos/cloudwarriors-ai/tesseract-platform/dispatches \
+            -d '{
+              "event_type": "submodule-updated",
+              "client_payload": {
+                "submodule": "services/platforms/dialpad/dialpad-platform-gateway",
+                "branch": "master",
+                "repository": "dialpad-api-gateway",
+                "commit": "${{ github.sha }}"
+              }
+            }'
+
+          echo "✅ Monorepo notification sent!"
