@@ -6,6 +6,7 @@ import time
 
 from app.database.connection import engine, SessionLocal
 from app.core.exceptions import CustomException
+from app.services import dialpad_discovery
 
 # Configure logging
 logging.basicConfig(
@@ -71,6 +72,10 @@ async def startup_event():
     import app.database.models  # Import models to register them with SQLAlchemy
     from app.database.models import Base
     Base.metadata.create_all(bind=engine)
+
+    # Initialize endpoint discovery
+    dialpad_discovery.initialize_discovery()
+
     logger.info("Service initialized successfully")
 
 # Shutdown event
@@ -89,6 +94,60 @@ app.include_router(transform_router, prefix="/api/transform", tags=["Transform"]
 
 # Also mount the MCP router at /mcp for backward compatibility
 app.include_router(mcp_router, prefix="/mcp", tags=["MCP-Legacy"])
+
+# Discovery endpoint
+@app.get("/api/discovery/dialpad-endpoints", tags=["Discovery"])
+async def get_discovery_endpoints(
+    category: str = None,
+    limit: int = None
+):
+    """
+    Discovery endpoint that exposes all available Dialpad API endpoints with metadata.
+
+    Provides a queryable interface for endpoint discovery, allowing filtering by category
+    and limiting result count.
+
+    Args:
+        category: Optional category filter (e.g., "Users", "Call Management")
+        limit: Optional limit on number of results
+
+    Returns:
+        Dict containing endpoint metadata and list of endpoints
+    """
+    return dialpad_discovery.get_endpoints_by_category(category=category, limit=limit)
+
+# Customize OpenAPI schema to include extended endpoint information
+def custom_openapi():
+    """
+    Customize OpenAPI schema with Dialpad endpoint extensions.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    from fastapi.openapi.utils import get_openapi
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    # Add x-dialpad-endpoints extension
+    dialpad_data = dialpad_discovery.fetch_dialpad_endpoints()
+    openapi_schema["x-dialpad-endpoints"] = {
+        "source": dialpad_data["source"],
+        "endpoint_count": dialpad_data["total_endpoints"],
+        "categories": dialpad_data["categories"],
+        "endpoints": dialpad_data["endpoints"],
+        "last_updated": dialpad_data["last_updated"]
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+# Override FastAPI's openapi method
+app.openapi = custom_openapi
 
 # If this file is run directly, start the application with Uvicorn
 if __name__ == "__main__":
