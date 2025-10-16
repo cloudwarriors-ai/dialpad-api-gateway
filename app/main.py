@@ -6,6 +6,7 @@ import time
 
 from app.database.connection import engine, SessionLocal
 from app.core.exceptions import CustomException
+from app.services import dialpad_discovery
 
 # Configure logging
 logging.basicConfig(
