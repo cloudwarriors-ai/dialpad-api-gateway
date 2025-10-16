@@ -143,14 +143,7 @@ async def auth_connect(body: ConnectRequest):
     and provider tokens for use by the Django API Gateway.
     """
     try:
-        system_creds = pm.get_system_credentials(body.tenant, body.app)
-        if not system_creds:
-            logger.warning(f"System credentials not found: tenant={body.tenant} app={body.app}")
-            raise HTTPException(
-                status_code=404,
-                detail=f"System credentials not found for tenant={body.tenant} app={body.app}"
-            )
-
+        # Use provider credentials directly (like Teams/Zoom/RingCentral gateways)
         provider_data = pm.get_provider(body.tenant, 'dialpad')
         if not provider_data:
             logger.warning(f"Provider 'dialpad' not found for tenant={body.tenant}")
@@ -159,8 +152,8 @@ async def auth_connect(body: ConnectRequest):
                 detail=f"Provider 'dialpad' not found for tenant={body.tenant}"
             )
 
-        # Dialpad uses API key as Bearer token
-        api_key = provider_data.get('api_key')
+        # Dialpad uses API key as Bearer token - check both api_key and client_secret
+        api_key = provider_data.get('api_key') or provider_data.get('client_secret')
         
         if not api_key:
             raise HTTPException(
@@ -171,13 +164,14 @@ async def auth_connect(body: ConnectRequest):
         provider_tokens = {
             'access_token': api_key,  # Use api_key as access_token for consistency
             'token_type': 'Bearer',
-            'api_base_url': provider_data.get('api_base_url', 'https://dialpad.com/api/v2')
+            'api_base_url': provider_data.get('api_base_url', 'https://dialpad.com/api/v2'),
+            'api_key': api_key  # Store as both access_token and api_key for compatibility
         }
 
         session_data = sm.create_session(
             tenant=body.tenant,
             app=body.app,
-            system_creds=system_creds,
+            system_creds={},  # Empty since we use provider credentials directly
             provider_tokens=provider_tokens
         )
 
