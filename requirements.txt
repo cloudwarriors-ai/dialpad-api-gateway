@@ -17,3 +17,4 @@ aiofiles==23.2.1
 typing-extensions==4.7.1
 tenacity==8.2.3
 redis==5.0.1
+httpx==0.24.1
