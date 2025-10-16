@@ -159,11 +159,19 @@ async def auth_connect(body: ConnectRequest):
                 detail=f"Provider 'dialpad' not found for tenant={body.tenant}"
             )
 
+        # Dialpad uses API key as Bearer token
+        api_key = provider_data.get('api_key')
+        
+        if not api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Missing required Dialpad API key"
+            )
+        
         provider_tokens = {
-            'api_key': provider_data.get('api_key'),
-            'api_secret': provider_data.get('api_secret'),
-            'account_id': provider_data.get('account_id', ''),
-            'api_base_url': provider_data.get('api_base_url', 'https://api.dialpad.us/v2')
+            'access_token': api_key,  # Use api_key as access_token for consistency
+            'token_type': 'Bearer',
+            'api_base_url': provider_data.get('api_base_url', 'https://dialpad.com/api/v2')
         }
 
         session_data = sm.create_session(

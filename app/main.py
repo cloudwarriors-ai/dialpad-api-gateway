@@ -6,7 +6,6 @@ import time
 
 from app.database.connection import engine, SessionLocal
 from app.core.exceptions import CustomException
-from app.services import dialpad_discovery
 
 # Configure logging
 logging.basicConfig(
@@ -17,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI application
 app = FastAPI(
-    title="Dialpad Platform Microservice",
-    description="Microservice for Dialpad platform integrations with SSOT field mapping",
+    title="Dialpad Platform Gateway",
+    description="Gateway for Dialpad platform integrations",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -61,7 +60,7 @@ async def custom_exception_handler(request: Request, exc: CustomException):
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint to verify the service is running."""
-    return {"status": "healthy", "service": "dialpad-platform-microservice"}
+    return {"status": "healthy", "service": "dialpad-platform-gateway"}
 
 # Startup event
 @app.on_event("startup")
@@ -72,9 +71,6 @@ async def startup_event():
     import app.database.models  # Import models to register them with SQLAlchemy
     from app.database.models import Base
     Base.metadata.create_all(bind=engine)
-
-    # Initialize endpoint discovery
-    dialpad_discovery.initialize_discovery()
 
     logger.info("Service initialized successfully")
 
@@ -88,106 +84,9 @@ async def shutdown_event():
 
 # Import and include routers
 from app.routers.auth import router as auth_router
-from app.routers.mcp import router as mcp_router
-from app.routers.transform import router as transform_router
+from app.routers.phone import router as phone_router
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-app.include_router(mcp_router, prefix="/api/mcp", tags=["MCP"])
-app.include_router(transform_router, prefix="/api/transform", tags=["Transform"])
-
-# Also mount the MCP router at /mcp for backward compatibility
-app.include_router(mcp_router, prefix="/mcp", tags=["MCP-Legacy"])
-
-# Discovery endpoint
-@app.get("/api/discovery/dialpad-endpoints", tags=["Discovery"])
-async def get_discovery_endpoints(
-    category: str = None,
-    limit: int = None
-):
-    """
-    Discovery endpoint that exposes all available Dialpad API endpoints with metadata.
-
-    Provides a queryable interface for endpoint discovery, allowing filtering by category
-    and limiting result count.
-
-    Args:
-        category: Optional category filter (e.g., "Users", "Call Management")
-        limit: Optional limit on number of results
-
-    Returns:
-        Dict containing endpoint metadata and list of endpoints
-    """
-    return dialpad_discovery.get_endpoints_by_category(category=category, limit=limit)
-
-# Customize OpenAPI schema to include extended endpoint information
-def custom_openapi():
-    """
-    Customize OpenAPI schema with Dialpad endpoint extensions.
-    """
-    if app.openapi_schema:
-        return app.openapi_schema
-
-    from fastapi.openapi.utils import get_openapi
-
-    openapi_schema = get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
-        routes=app.routes,
-    )
-
-    # Get discovered Dialpad endpoints
-    dialpad_data = dialpad_discovery.fetch_dialpad_endpoints()
-    endpoints = dialpad_data.get("endpoints", [])
-
-    # Initialize paths if not present
-    if 'paths' not in openapi_schema:
-        openapi_schema['paths'] = {}
-
-    # Inject discovered endpoints into standard OpenAPI paths
-    for endpoint in endpoints:
-        path = endpoint.get('path', '')
-        method = endpoint.get('method', 'GET').lower()
-
-        # Initialize path if not present
-        if path not in openapi_schema['paths']:
-            openapi_schema['paths'][path] = {}
-
-        # Build operation object
-        operation = {
-            'summary': endpoint.get('summary', ''),
-            'description': endpoint.get('description', ''),
-            'operationId': endpoint.get('operationId', f"{method}_{path.replace('/', '_')}"),
-            'tags': endpoint.get('tags', [endpoint.get('category', 'Uncategorized')]),
-            'parameters': endpoint.get('parameters', []),
-            'responses': {
-                '200': {
-                    'description': 'Successful response',
-                    'content': {
-                        'application/json': {
-                            'schema': {'type': 'object'}
-                        }
-                    }
-                }
-            }
-        }
-
-        # Add to paths
-        openapi_schema['paths'][path][method] = operation
-
-    # Keep x-dialpad-endpoints for backward compatibility
-    openapi_schema["x-dialpad-endpoints"] = {
-        "source": dialpad_data["source"],
-        "endpoint_count": dialpad_data["total_endpoints"],
-        "categories": dialpad_data["categories"],
-        "endpoints": dialpad_data["endpoints"],
-        "last_updated": dialpad_data["last_updated"]
-    }
-
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-# Override FastAPI's openapi method
-app.openapi = custom_openapi
+app.include_router(phone_router, tags=["Dialpad Phone"])
 
 # If this file is run directly, start the application with Uvicorn
 if __name__ == "__main__":
