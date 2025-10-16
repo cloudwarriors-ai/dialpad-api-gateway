@@ -6,7 +6,6 @@ import time
 
 from app.database.connection import engine, SessionLocal
 from app.core.exceptions import CustomException
-from app.services import dialpad_discovery
 
 # Configure logging
 logging.basicConfig(
@@ -17,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI application
 app = FastAPI(
-    title="Dialpad Platform Microservice",
-    description="Microservice for Dialpad platform integrations with SSOT field mapping",
+    title="Dialpad Platform Gateway",
+    description="Gateway for Dialpad platform integrations",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -61,7 +60,7 @@ async def custom_exception_handler(request: Request, exc: CustomException):
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint to verify the service is running."""
-    return {"status": "healthy", "service": "dialpad-platform-microservice"}
+    return {"status": "healthy", "service": "dialpad-platform-gateway"}
 
 # Startup event
 @app.on_event("startup")
@@ -72,9 +71,6 @@ async def startup_event():
     import app.database.models  # Import models to register them with SQLAlchemy
     from app.database.models import Base
     Base.metadata.create_all(bind=engine)
-
-    # Initialize endpoint discovery
-    dialpad_discovery.initialize_discovery()
 
     logger.info("Service initialized successfully")
 
@@ -88,6 +84,9 @@ async def shutdown_event():
 
 # Import and include routers
 from app.routers.auth import router as auth_router
+from app.routers.phone import router as phone_router
+app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(phone_router, tags=["Dialpad Phone"])
 from app.routers.mcp import router as mcp_router
 from app.routers.transform import router as transform_router
 from app.routers.proxy import router as proxy_router
